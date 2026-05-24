@@ -16,13 +16,12 @@ st.set_page_config(
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
-# Proyectos hardcodeados como base + los que se agreguen en sesion
 PROYECTOS_DEFAULT = {
     "escuela_graphos": {
         "nombre": "Escuela Graphos",
         "descripcion": "Sistema educativo con estudiantes, calificaciones, asistencias y convivencia",
-        "neo4j_uri": "neo4j+s://7c3c4e8f.databases.neo4j.io",
-        "neo4j_user": "7c3c4e8f",
+        "neo4j_uri": os.environ.get("NEO4J_URI", ""),
+        "neo4j_user": os.environ.get("NEO4J_USER", ""),
         "neo4j_password": os.environ.get("NEO4J_PASSWORD", ""),
         "schema_texto": """
 Nodos: Estudiante(nombre, apellido, grado, perfil), Docente(nombre, apellido),
@@ -42,6 +41,26 @@ estado_pago: al_dia, mora_1mes, mora_2meses, becado, exonerado
 Nota minima aprobatoria: 7.0
 """,
         "creado": "2024-01-01"
+    },
+    "life_compass": {
+        "nombre": "Life Compass",
+        "descripcion": "Seguimiento semanal de categorias de vida personal con puntajes 0-100",
+        "neo4j_uri": os.environ.get("NEO4J_URI", ""),
+        "neo4j_user": os.environ.get("NEO4J_USER", ""),
+        "neo4j_password": os.environ.get("NEO4J_PASSWORD", ""),
+        "schema_texto": """
+Nodos: LCCategoria(nombre), LCSubcategoria(nombre, categoria),
+LCEvaluacion(fecha, semana), LCPuntaje(valor, fecha, tipo)
+Relaciones:
+(LCEvaluacion)-[:INCLUYE]->(LCPuntaje)-[:DE_CATEGORIA]->(LCCategoria)
+(LCEvaluacion)-[:INCLUYE]->(LCPuntaje)-[:DE_SUBCATEGORIA]->(LCSubcategoria)
+(LCSubcategoria)-[:PERTENECE_A]->(LCCategoria)
+Categorias: Body, Mind, Work, Energy, Love, Money and Finances, Admin,
+Trauma Healing, Health and Fitness, Partner and Love, Fun and Recreation,
+Spirituality, Creative Force
+Valores: puntajes de 0 a 100, fechas en formato YYYY-MM-DD
+""",
+        "creado": "2026-05-24"
     }
 }
 
@@ -166,7 +185,6 @@ def obtener_metricas(proyecto):
     except:
         return [], 0
 
-# ── ESTADO INICIAL ────────────────────────────────────
 if "pagina" not in st.session_state:
     st.session_state.pagina = "inicio"
 if "proyecto_activo" not in st.session_state:
@@ -176,7 +194,6 @@ if "historial_chat" not in st.session_state:
 
 proyectos = cargar_proyectos()
 
-# ── SIDEBAR ──────────────────────────────────────────
 with st.sidebar:
     st.markdown("### 🕸️ Graphos Platform")
     st.markdown("---")
@@ -196,9 +213,6 @@ with st.sidebar:
         st.session_state.pagina = "inicio"
         st.rerun()
 
-# ════════════════════════════════════════════════════
-# PAGINA: INICIO
-# ════════════════════════════════════════════════════
 if st.session_state.pagina == "inicio":
     st.markdown('<div class="main-title">🕸️ Graphos Platform</div>', unsafe_allow_html=True)
     st.markdown('<div class="main-subtitle">Chatea con tus datos en lenguaje natural</div>', unsafe_allow_html=True)
@@ -225,9 +239,6 @@ if st.session_state.pagina == "inicio":
                     st.session_state.pagina = "dashboard"
                     st.rerun()
 
-# ════════════════════════════════════════════════════
-# PAGINA: DASHBOARD
-# ════════════════════════════════════════════════════
 elif st.session_state.pagina == "dashboard":
     proyecto = proyectos.get(st.session_state.proyecto_activo, {})
     st.markdown(f'<div class="main-title">📊 {proyecto.get("nombre","")}</div>', unsafe_allow_html=True)
@@ -285,9 +296,6 @@ elif st.session_state.pagina == "dashboard":
         st.session_state.pagina = "inicio"
         st.rerun()
 
-# ════════════════════════════════════════════════════
-# PAGINA: CHAT
-# ════════════════════════════════════════════════════
 elif st.session_state.pagina == "chat":
     proyecto = proyectos.get(st.session_state.proyecto_activo, {})
     col1, col2 = st.columns([4, 1])
@@ -325,9 +333,6 @@ elif st.session_state.pagina == "chat":
         })
         st.rerun()
 
-# ════════════════════════════════════════════════════
-# PAGINA: NUEVO PROYECTO
-# ════════════════════════════════════════════════════
 elif st.session_state.pagina == "nuevo":
     st.markdown('<div class="main-title">➕ Nuevo proyecto</div>', unsafe_allow_html=True)
     st.markdown("---")
