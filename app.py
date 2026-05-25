@@ -50,17 +50,25 @@ Nota minima aprobatoria: 7.0
         "neo4j_password": os.environ.get("NEO4J_PASSWORD", ""),
         "schema_texto": """
 Nodos: LCCategoria(nombre), LCSubcategoria(nombre, categoria),
-LCEvaluacion(fecha, semana), LCPuntaje(valor, fecha, tipo)
+LCEvaluacion(fecha, semana), LCPuntaje(valor, fecha)
+
 Relaciones:
 (LCEvaluacion)-[:INCLUYE]->(LCPuntaje)-[:DE_CATEGORIA]->(LCCategoria)
 (LCEvaluacion)-[:INCLUYE]->(LCPuntaje)-[:DE_SUBCATEGORIA]->(LCSubcategoria)
 (LCSubcategoria)-[:PERTENECE_A]->(LCCategoria)
+
+IMPORTANTE: Los puntajes de categoria NO tienen propiedad tipo.
+Los puntajes de subcategoria tienen tipo='sub'.
+Para obtener puntajes por categoria usar:
+MATCH (ev:LCEvaluacion)-[:INCLUYE]->(p:LCPuntaje)-[:DE_CATEGORIA]->(c:LCCategoria)
+RETURN c.nombre, p.valor ORDER BY p.valor ASC
+
 Categorias: Body, Mind, Work, Energy, Love, Money and Finances, Admin,
 Trauma Healing, Health and Fitness, Partner and Love, Fun and Recreation,
 Spirituality, Creative Force
 Valores: puntajes de 0 a 100, fechas en formato YYYY-MM-DD
 """,
-        "creado": "2026-05-24"
+        "creado": "2026-05-25"
     }
 }
 
@@ -159,9 +167,9 @@ Devuelve UNICAMENTE el Cypher, sin explicaciones ni bloques de codigo."""
         model="claude-sonnet-4-6",
         max_tokens=600,
         system=f"""Eres un asistente del proyecto '{proyecto['nombre']}'.
-Interpreta los datos y responde en español claro y util.
+Interpreta los datos y responde en espanol claro y util.
 Usa tablas markdown cuando haya listas de datos.
-Maximo 8 lineas.""",
+Maximo 8 lineas. Si no hay datos dilo claramente.""",
         messages=[{"role": "user", "content":
             f"Pregunta: {pregunta}\nDatos: {datos}"}]
     )
@@ -195,26 +203,26 @@ if "historial_chat" not in st.session_state:
 proyectos = cargar_proyectos()
 
 with st.sidebar:
-    st.markdown("### 🕸️ Graphos Platform")
+    st.markdown("### Graphos Platform")
     st.markdown("---")
     if proyectos:
         st.markdown("**Mis proyectos**")
         for key, p in proyectos.items():
-            if st.button(f"🗂️ {p['nombre']}", key=f"nav_{key}", use_container_width=True):
+            if st.button(f"{p['nombre']}", key=f"nav_{key}", use_container_width=True):
                 st.session_state.pagina = "chat"
                 st.session_state.proyecto_activo = key
                 st.session_state.historial_chat = []
                 st.rerun()
     st.markdown("---")
-    if st.button("➕ Nuevo proyecto", use_container_width=True):
+    if st.button("+ Nuevo proyecto", use_container_width=True):
         st.session_state.pagina = "nuevo"
         st.rerun()
-    if st.button("🏠 Inicio", use_container_width=True):
+    if st.button("Inicio", use_container_width=True):
         st.session_state.pagina = "inicio"
         st.rerun()
 
 if st.session_state.pagina == "inicio":
-    st.markdown('<div class="main-title">🕸️ Graphos Platform</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-title">Graphos Platform</div>', unsafe_allow_html=True)
     st.markdown('<div class="main-subtitle">Chatea con tus datos en lenguaje natural</div>', unsafe_allow_html=True)
 
     cols = st.columns(2)
@@ -222,26 +230,26 @@ if st.session_state.pagina == "inicio":
         with cols[i % 2]:
             st.markdown(f"""
             <div class='proyecto-card'>
-                <div class='proyecto-titulo'>🗂️ {proyecto['nombre']}</div>
+                <div class='proyecto-titulo'>{proyecto['nombre']}</div>
                 <div class='proyecto-desc'>{proyecto.get('descripcion','')[:120]}</div>
             </div>
             """, unsafe_allow_html=True)
             c1, c2 = st.columns(2)
             with c1:
-                if st.button("💬 Chat", key=f"chat_{key}", use_container_width=True):
+                if st.button("Chat", key=f"chat_{key}", use_container_width=True):
                     st.session_state.proyecto_activo = key
                     st.session_state.historial_chat = []
                     st.session_state.pagina = "chat"
                     st.rerun()
             with c2:
-                if st.button("📊 Dashboard", key=f"dash_{key}", use_container_width=True):
+                if st.button("Dashboard", key=f"dash_{key}", use_container_width=True):
                     st.session_state.proyecto_activo = key
                     st.session_state.pagina = "dashboard"
                     st.rerun()
 
 elif st.session_state.pagina == "dashboard":
     proyecto = proyectos.get(st.session_state.proyecto_activo, {})
-    st.markdown(f'<div class="main-title">📊 {proyecto.get("nombre","")}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="main-title">{proyecto.get("nombre","")}</div>', unsafe_allow_html=True)
     st.markdown('<div class="main-subtitle">Dashboard de analisis</div>', unsafe_allow_html=True)
 
     with st.spinner("Cargando datos del grafo..."):
@@ -292,7 +300,7 @@ elif st.session_state.pagina == "dashboard":
             except Exception as e:
                 st.error(f"Error: {e}")
 
-    if st.button("← Volver"):
+    if st.button("Volver"):
         st.session_state.pagina = "inicio"
         st.rerun()
 
@@ -300,11 +308,11 @@ elif st.session_state.pagina == "chat":
     proyecto = proyectos.get(st.session_state.proyecto_activo, {})
     col1, col2 = st.columns([4, 1])
     with col1:
-        st.markdown(f'<div class="main-title">💬 {proyecto.get("nombre","")}</div>', unsafe_allow_html=True)
-        st.markdown('<div class="main-subtitle">Escribe cualquier pregunta en español</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="main-title">{proyecto.get("nombre","")}</div>', unsafe_allow_html=True)
+        st.markdown('<div class="main-subtitle">Escribe cualquier pregunta en espanol</div>', unsafe_allow_html=True)
     with col2:
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("🗑️ Limpiar", use_container_width=True):
+        if st.button("Limpiar", use_container_width=True):
             st.session_state.historial_chat = []
             st.rerun()
 
@@ -334,7 +342,7 @@ elif st.session_state.pagina == "chat":
         st.rerun()
 
 elif st.session_state.pagina == "nuevo":
-    st.markdown('<div class="main-title">➕ Nuevo proyecto</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-title">Nuevo proyecto</div>', unsafe_allow_html=True)
     st.markdown("---")
     nombre = st.text_input("Nombre del proyecto", placeholder="Ej: Hospital Central")
     col1, col2 = st.columns(2)
